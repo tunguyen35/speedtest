@@ -1,51 +1,40 @@
-// Dynamic import của speedtest library
-let SpeedTest;
-
-// Load library từ CDN hoặc local
-async function loadSpeedTest() {
-    try {
-        // Cách 1: Dùng CDN (nếu có)
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@latest/dist/speedtest.min.js';
-        document.head.appendChild(script);
-        
-        // Wait for library loaded
-        await new Promise((resolve) => {
-            script.onload = resolve;
-        });
-        
-        SpeedTest = window.SpeedTest;
-    } catch (error) {
-        console.error('Failed to load SpeedTest library:', error);
-    }
-}
-
-// Khởi tạo
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadSpeedTest();
-    initializeApp();
-});
+// Load SpeedTest từ CDN
+const SPEEDTEST_CDN = 'https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1.10.1/dist/speedtest.min.js';
 
 let speedtest = null;
 let history = [];
 let isRunning = false;
 
+// DOM elements
 const startBtn = document.getElementById('startBtn');
 const resetBtn = document.getElementById('resetBtn');
 const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const resultsDiv = document.getElementById('results');
 const progressDiv = document.getElementById('progress');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
 const historyList = document.getElementById('historyList');
 
-// Load history from localStorage
+// Load library từ CDN
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+// Load history từ localStorage
 function loadHistory() {
     const saved = localStorage.getItem('speedtest-history');
     history = saved ? JSON.parse(saved) : [];
     renderHistory();
 }
 
-// Save history to localStorage
+// Save history vào localStorage
 function saveHistory() {
     localStorage.setItem('speedtest-history', JSON.stringify(history));
 }
@@ -62,156 +51,181 @@ function renderHistory() {
             <div class="history-item-info">
                 <div class="history-item-time">${item.timestamp}</div>
                 <div class="history-item-values">
-                    ↓ ${item.download.toFixed(2)} Mbps | ↑ ${item.upload.toFixed(2)} Mbps | Ping ${item.latency.toFixed(0)}ms
+                    ↓ ${item.download} Mbps &nbsp;|&nbsp; ↑ ${item.upload} Mbps &nbsp;|&nbsp; Ping ${item.latency}ms &nbsp;|&nbsp; Jitter ${item.jitter}ms
                 </div>
             </div>
-            <button class="history-item-delete" onclick="deleteHistory(${index})">Delete</button>
+            <button class="history-item-delete" onclick="deleteHistory(${index})">✕</button>
         </div>
     `).join('');
 }
 
-// Delete history item
-function deleteHistory(index) {
+// Xóa 1 history item
+window.deleteHistory = function(index) {
     history.splice(index, 1);
     saveHistory();
     renderHistory();
 }
 
-// Initialize app
-function initializeApp() {
-    loadHistory();
-
-    startBtn.addEventListener('click', startTest);
-    resetBtn.addEventListener('click', resetTest);
+// Update progress bar
+function setProgress(pct) {
+    progressFill.style.width = pct + '%';
+    progressText.textContent = Math.round(pct) + '%';
 }
 
-// Start test
+// Update status text
+function updateStatus(type) {
+    const messages = {
+        latency: '📡 Measuring latency...',
+        download: '⬇️ Measuring download speed...',
+        upload: '⬆️ Measuring upload speed...',
+        packetLoss: '📦 Measuring packet loss...'
+    };
+    statusText.textContent = messages[type] || '⏳ Running test...';
+}
+
+// Bắt đầu test
 async function startTest() {
-    if (isRunning || !SpeedTest) return;
+    if (isRunning) return;
+
+    // Load library nếu chưa load
+    if (!window.SpeedTest) {
+        statusText.textContent = '⏳ Loading library...';
+        statusDiv.style.display = 'block';
+        try {
+            await loadScript(SPEEDTEST_CDN);
+        } catch (e) {
+            statusText.textContent = '❌ Cannot load SpeedTest library. Please refresh!';
+            return;
+        }
+    }
 
     isRunning = true;
     startBtn.disabled = true;
-    resetBtn.disabled = true;
-    statusDiv.style.display = 'block';
+    resetBtn.disabled = false;
+
+    // Reset UI
     resultsDiv.style.display = 'none';
+    statusDiv.style.display = 'block';
     progressDiv.style.display = 'block';
+    statusText.textContent = '⏳ Initializing...';
+    setProgress(0);
 
-    statusText.textContent = 'Initializing test...';
-    document.getElementById('progressFill').style.width = '0%';
-    document.getElementById('progressText').textContent = '0%';
-
-    try {
-        // Create speedtest instance
-        speedtest = new SpeedTest({
-            autoStart: false,
-        });
-
-        // Update on progress
-        let lastProgress = 0;
-        speedtest.onResultsChange = (info) => {
-            const progress = Math.min(
-                (speedtest.results.getDownloadBandwidthPoints().length * 10 +
-                 speedtest.results.getUploadBandwidthPoints().length * 10) / 2,
-                90
-            );
-
-            if (progress > lastProgress) {
-                lastProgress = progress;
-                document.getElementById('progressFill').style.width = progress + '%';
-                document.getElementById('progressText').textContent = Math.round(progress) + '%';
-            }
-
-            updateStatusText(info.type);
-        };
-
-        // On error
-        speedtest.onError = (error) => {
-            console.error('Test error:', error);
-            statusText.textContent = `Error: ${error}`;
-        };
-
-        // On finish
-        speedtest.onFinish = (results) => {
-            showResults(results);
-            isRunning = false;
-            startBtn.disabled = false;
-            resetBtn.disabled = false;
-        };
-
-        // Start the test
-        statusText.textContent = 'Running test...';
-        speedtest.play();
-
-    } catch (error) {
-        console.error('Test failed:', error);
-        statusText.textContent = 'Test failed. Please try again.';
-        isRunning = false;
-        startBtn.disabled = false;
-        resetBtn.disabled = false;
-    }
-}
-
-// Update status text based on measurement type
-function updateStatusText(type) {
-    const messages = {
-        'latency': 'Measuring latency...',
-        'download': 'Measuring download speed...',
-        'upload': 'Measuring upload speed...',
-        'packetLoss': 'Measuring packet loss...'
-    };
-    statusText.textContent = messages[type] || 'Running test...';
-}
-
-// Show results
-function showResults(results) {
-    const summary = results.getSummary();
-
-    const download = (summary.download / 1e6).toFixed(2); // bps to Mbps
-    const upload = (summary.upload / 1e6).toFixed(2);
-    const latency = summary.latency.toFixed(2);
-    const jitter = summary.jitter.toFixed(2);
-
-    document.getElementById('downloadValue').textContent = download;
-    document.getElementById('uploadValue').textContent = upload;
-    document.getElementById('latencyValue').textContent = latency;
-    document.getElementById('jitterValue').textContent = jitter;
-
-    progressDiv.style.display = 'none';
-    statusDiv.style.display = 'none';
-    resultsDiv.style.display = 'grid';
-    document.getElementById('progressFill').style.width = '100%';
-    document.getElementById('progressText').textContent = '100%';
-
-    // Save to history
-    const now = new Date();
-    const timestamp = now.toLocaleString();
-    
-    history.unshift({
-        timestamp,
-        download: parseFloat(download),
-        upload: parseFloat(upload),
-        latency: parseFloat(latency),
-        jitter: parseFloat(jitter)
+    // Reset values
+    ['download', 'upload', 'latency', 'jitter'].forEach(id => {
+        document.getElementById(id + 'Value').textContent = '-';
     });
 
-    // Keep only last 20 tests
-    if (history.length > 20) {
-        history = history.slice(0, 20);
-    }
+    try {
+        speedtest = new window.SpeedTest({ autoStart: false });
 
-    saveHistory();
-    renderHistory();
+        let dlPoints = 0;
+        let ulPoints = 0;
+
+        speedtest.onResultsChange = ({ type }) => {
+            updateStatus(type);
+
+            // Cập nhật real-time
+            const results = speedtest.results;
+
+            if (type === 'download') {
+                dlPoints++;
+                const dl = results.getDownloadBandwidth();
+                if (dl) {
+                    document.getElementById('downloadValue').textContent = (dl / 1e6).toFixed(1);
+                    resultsDiv.style.display = 'grid';
+                }
+                setProgress(Math.min(dlPoints * 5, 40));
+            }
+
+            if (type === 'upload') {
+                ulPoints++;
+                const ul = results.getUploadBandwidth();
+                if (ul) {
+                    document.getElementById('uploadValue').textContent = (ul / 1e6).toFixed(1);
+                    resultsDiv.style.display = 'grid';
+                }
+                setProgress(Math.min(40 + ulPoints * 5, 80));
+            }
+
+            if (type === 'latency') {
+                const lat = results.getUnloadedLatency();
+                const jit = results.getUnloadedJitter();
+                if (lat) document.getElementById('latencyValue').textContent = lat.toFixed(0);
+                if (jit) document.getElementById('jitterValue').textContent = jit.toFixed(0);
+                resultsDiv.style.display = 'grid';
+            }
+        };
+
+        speedtest.onError = (err) => {
+            console.error('SpeedTest error:', err);
+            statusText.textContent = '⚠️ Error: ' + err;
+            isRunning = false;
+            startBtn.disabled = false;
+        };
+
+        speedtest.onFinish = (results) => {
+            setProgress(100);
+            statusDiv.style.display = 'none';
+            progressDiv.style.display = 'none';
+            resultsDiv.style.display = 'grid';
+
+            const summary = results.getSummary();
+            const dl = summary.download ? (summary.download / 1e6).toFixed(2) : '0';
+            const ul = summary.upload ? (summary.upload / 1e6).toFixed(2) : '0';
+            const lat = summary.latency ? summary.latency.toFixed(0) : '0';
+            const jit = summary.jitter ? summary.jitter.toFixed(0) : '0';
+
+            document.getElementById('downloadValue').textContent = dl;
+            document.getElementById('uploadValue').textContent = ul;
+            document.getElementById('latencyValue').textContent = lat;
+            document.getElementById('jitterValue').textContent = jit;
+
+            // Lưu vào history
+            history.unshift({
+                timestamp: new Date().toLocaleString('vi-VN'),
+                download: dl,
+                upload: ul,
+                latency: lat,
+                jitter: jit
+            });
+            if (history.length > 20) history = history.slice(0, 20);
+            saveHistory();
+            renderHistory();
+
+            isRunning = false;
+            startBtn.disabled = false;
+            startBtn.textContent = '🔄 Test Again';
+        };
+
+        speedtest.play();
+
+    } catch (err) {
+        console.error(err);
+        statusText.textContent = '❌ Test failed: ' + err.message;
+        isRunning = false;
+        startBtn.disabled = false;
+    }
 }
 
 // Reset test
 function resetTest() {
-    statusDiv.style.display = 'none';
-    resultsDiv.style.display = 'none';
-    progressDiv.style.display = 'none';
-    startBtn.disabled = false;
-    isRunning = false;
-
     if (speedtest) {
         speedtest.pause();
+        speedtest = null;
     }
+    isRunning = false;
+    startBtn.disabled = false;
+    startBtn.textContent = '▶ Start Test';
+    resetBtn.disabled = true;
+    statusDiv.style.display = 'none';
+    progressDiv.style.display = 'none';
+    resultsDiv.style.display = 'none';
+    setProgress(0);
 }
+
+// Event listeners
+startBtn.addEventListener('click', startTest);
+resetBtn.addEventListener('click', resetTest);
+
+// Khởi tạo
+loadHistory();
