@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare Speed Test</title>
+    <title>⚡ Speed Test</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <h1>⚡ Speed Test</h1>
-            <p>Test your internet connection</p>
+            <p>Test your internet connection speed</p>
         </header>
 
         <main class="main">
-            <!-- Test Controls -->
+            <!-- Controls -->
             <div class="controls">
-                <button id="startBtn" class="btn btn-primary">Start Test</button>
-                <button id="resetBtn" class="btn btn-secondary" disabled>Reset</button>
+                <button id="startBtn" class="btn btn-primary">▶ Start Test</button>
+                <button id="resetBtn" class="btn btn-secondary" disabled>↺ Reset</button>
             </div>
 
             <!-- Status -->
@@ -25,9 +25,10 @@
                 <p id="statusText">Initializing...</p>
             </div>
 
-            <!-- Results -->
+            <!-- Results (hiện real-time) -->
             <div id="results" class="results" style="display: none;">
-                <div class="result-card">
+                <div class="result-card download-card">
+                    <div class="result-icon">⬇️</div>
                     <div class="result-value">
                         <span id="downloadValue">-</span>
                         <span class="result-unit">Mbps</span>
@@ -35,7 +36,8 @@
                     <div class="result-label">Download</div>
                 </div>
 
-                <div class="result-card">
+                <div class="result-card upload-card">
+                    <div class="result-icon">⬆️</div>
                     <div class="result-value">
                         <span id="uploadValue">-</span>
                         <span class="result-unit">Mbps</span>
@@ -43,7 +45,8 @@
                     <div class="result-label">Upload</div>
                 </div>
 
-                <div class="result-card">
+                <div class="result-card latency-card">
+                    <div class="result-icon">📡</div>
                     <div class="result-value">
                         <span id="latencyValue">-</span>
                         <span class="result-unit">ms</span>
@@ -51,7 +54,8 @@
                     <div class="result-label">Latency</div>
                 </div>
 
-                <div class="result-card">
+                <div class="result-card jitter-card">
+                    <div class="result-icon">📊</div>
                     <div class="result-value">
                         <span id="jitterValue">-</span>
                         <span class="result-unit">ms</span>
@@ -61,19 +65,20 @@
             </div>
 
             <!-- Progress -->
-            <div id="progress" style="display: none;">
+            <div id="progress" style="display: none; margin-top: 20px;">
                 <div class="progress-bar">
                     <div id="progressFill" class="progress-fill"></div>
                 </div>
-                <p id="progressText">0%</p>
+                <p id="progressText" style="text-align:center; margin-top:8px; color:#667eea; font-weight:600;">0%</p>
             </div>
         </main>
 
-        <!-- History Section -->
+        <!-- History -->
         <section class="history">
-            <h2>Test History</h2>
+            <div class="history-header">
+                <h2>📋 Test History</h2>
+            </div>
             <div id="historyList" class="history-list"></div>
-            
         </section>
     </div>
 
