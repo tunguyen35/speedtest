@@ -19,7 +19,7 @@ const serverInfoDiv = document.getElementById('serverInfo');
 async function fetchServerInfo() {
     try {
         // Lấy colo, ip từ cloudflare trace
-        const traceRes = await fetch('https://cloudflare.com/cdn-cgi/trace');
+        const traceRes = await fetch('https://1.1.1.1/cdn-cgi/trace');
         const traceText = await traceRes.text();
 
         // Parse plain text: key=value mỗi dòng
