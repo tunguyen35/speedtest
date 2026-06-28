@@ -1,0 +1,9 @@
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "net.twa.pingvn_pages_dev.app",
+      "sha256_cert_fingerprints": ["A7:2B:2C:AB:FD:E9:38:52:E2:49:9D:06:27:A3:B1:BB:3E:FA:76:ED:DF:8D:41:04:11:49:2A:79:CC:48:AF:61"]
+    }
+  }
+]
