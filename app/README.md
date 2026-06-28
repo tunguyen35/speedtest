@@ -40,9 +40,9 @@ app/
 | Setting | Value |
 |---------|-------|
 | Framework preset | `None` |
-| Build command | `echo 'Deploy ready'` |
+| Build command | echo 'Build complete' |
 | Build output directory | `app` |
-
+| Root directory| / |
 ---
 
 ## 📝 Notes
