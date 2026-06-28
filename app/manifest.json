@@ -3,7 +3,7 @@
   "short_name": "SpeedTest",
   "description": "Test your internet connection speed powered by Cloudflare",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#0c0f16",
   "theme_color": "#0066ff",
   "orientation": "portrait-primary",
